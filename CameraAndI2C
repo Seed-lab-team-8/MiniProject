@@ -27,13 +27,16 @@ def findCenter(corners): # Get the center of the aruco image in x,y pixel coordi
     return( (abs(((corners[0][0][2][0] - corners[0][0][0][0]))/2) + corners[0][0][0][0]),
             (abs(((corners[0][0][2][1] - corners[0][0][0][1]))/2) + corners[0][0][0][1]) )
 
-print ("Use aruco to get wheel to move. Position 0 is angle 0, position 1 is angle pi/2, position 2 is angle pi, position 3 is angle 3*pi/4. Put the aruco in quadrant 1 (+x,+y) for position 0, quadrant 2 for position 1, quadrant 3 for position 2 and quadrant 4 for position 3 respectively. Press a key to continue.")
+print ("Use aruco to get wheel to move. Position 0 is angle 0, position 1 is angle pi/2, position 2 is angle pi, position 3 is angle 3*pi/2. Put the aruco in quadrant 1 (+x,+y) for position 0, quadrant 2 for position 1, quadrant 3 for position 2 and quadrant 4 for position 3 respectively. Press a key to continue.")
 cv2.waitKey(0)
 
 cap = cv2.VideoCapture(0)
+
+cap.set(cv2.CAP_PROP_FPS,10)
+        
 i=0
-pos=0
-while(i<100):
+pos=50
+while(i<10000):
     _, frame = cap.read()
     #h,w,c = frame.shape
     #cv2.imshow('frame',frame)
@@ -51,26 +54,21 @@ while(i<100):
             if(center[0] > w/2 and center[1] < h/2): loc, pos = "Position 0: 0", 0
             if(center[0] < w/2 and center[1] < h/2): loc, pos = "Position 1: pi/2", 1
             if(center[0] < w/2 and center[1] > h/2): loc, pos = "Position 2: pi", 2
-            if(center[0] > w/2 and center[1] > h/2): loc, pos = "Position 3: 3pi/4", 3
+            if(center[0] > w/2 and center[1] > h/2): loc, pos = "Position 3: 3pi/2", 3
             cv2.putText(frame, loc, org = (0, 400), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color = (0, 0, 0))
-            bus.write_byte_data(address, 0, pos)
-            print ("RPI: Hi Arduino, I sent you ", pos)
-            lcd.color = [0, 100, 0]
-            lcd.text_direction = lcd.LEFT_TO_RIGHT
-            lcd.message = "RPI: Hi Arduino,\n I sent you " + str(pos)
-            time.sleep(1)
-            lcd.clear()
 
-            number = bus.read_byte_data(address, 0)
-            print ("Arduino: Hey RPI, I received a digit ", number)
-            lcd.color = [0, 100, 0]
-            lcd.text_direction = lcd.LEFT_TO_RIGHT
-            lcd.message = "Arduino: Hey RPI,\n I received " +str(number)
-            time.sleep(2)
-            lcd.clear()
-            lcd.color = [0, 0, 0]    
+            if(pos==0 or pos==1 or pos ==2 or pos ==3):
+                bus.write_byte_data(address, 0, pos)
+                print ("RPI: Hi Arduino, I sent you ", pos)
+                number = bus.read_byte_data(address, 0)
+                print ("Arduino: Hey RPI, I received a digit ", number)
+                print ("RPI: Hi Arduino, I sent you ", pos)
+                lcd.color = [0, 100, 0]
+                lcd.text_direction = lcd.LEFT_TO_RIGHT
+                lcd.message = str(pos) + ' ' +str(number)
+                
             cv2.imshow('frame',frame)
-            cv2.waitKey(0)
+            #cv2.waitKey(0)
             
         except: pass
                 
@@ -78,6 +76,7 @@ while(i<100):
 
     # Status Handling
     if(not corners):status = "No marker found"
+
     else:status = "Found a marker!"
     cv2.putText(frame, status, org = (0, 300), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color = (0, 0, 0))
     frame = aruco.drawDetectedMarkers(frame, corners, ids)
@@ -87,7 +86,7 @@ while(i<100):
     k = cv2.waitKey(1)
     if k == 27: break
     #print(h,w)
-    
+
 #print(frame)
 cv2.imshow('frame',frame)
 
