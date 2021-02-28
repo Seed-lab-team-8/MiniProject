@@ -11,6 +11,7 @@
       White to digital i/o 3
    Motor driver shield powered by battery
 */
+//include for I2C connection
 #include <Wire.h>
 #define SLAVE_ADDRESS 0x04
 byte data[32];
@@ -60,6 +61,7 @@ void setup() {
   pinMode(voltageDirection, OUTPUT);
   digitalWrite(voltageDirection,HIGH);
   digitalWrite(enable,HIGH);
+  //Setup for I2C Connection
   pinMode(13, OUTPUT);
   Serial.begin(115200); 
   Wire.begin(SLAVE_ADDRESS);
@@ -81,6 +83,7 @@ void setup() {
   //enable interrupt
   attachInterrupt(digitalPinToInterrupt(2), wheelTurn, CHANGE); 
 }
+//Function to receive data
 void receiveData(int byteCount) { 
   int i=0;
   while (Wire.available()) {
@@ -89,7 +92,7 @@ void receiveData(int byteCount) {
   }
 }
 
-
+//Function to send data
 void sendData() {
     Wire.write((int)(posA));
 }
