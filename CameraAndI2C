@@ -15,6 +15,7 @@ from picamera.array import PiRGBArray
 import os
 from PIL import Image
 
+#set up LCD screen
 lcd_columns = 16
 lcd_rows = 2
 i2c = busio.I2C(board.SCL, board.SDA)
@@ -58,13 +59,16 @@ while(i<10000):
             cv2.putText(frame, loc, org = (0, 400), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color = (0, 0, 0))
 
             if(pos==0 or pos==1 or pos ==2 or pos ==3):
+                #send position to the Arduino
                 bus.write_byte_data(address, 0, pos)
                 print ("RPI: Hi Arduino, I sent you ", pos)
+                #Read from Arduino
                 number = bus.read_byte_data(address, 0)
                 print ("Arduino: Hey RPI, I received a digit ", number)
                 print ("RPI: Hi Arduino, I sent you ", pos)
                 lcd.color = [0, 100, 0]
                 lcd.text_direction = lcd.LEFT_TO_RIGHT
+                #Print values on the LCD
                 lcd.message = str(pos) + ' ' +str(number)
                 
             cv2.imshow('frame',frame)
