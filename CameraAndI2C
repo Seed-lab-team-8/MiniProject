@@ -1,3 +1,4 @@
+#Load the required libraries for aruco marker detection and camera use
 import time
 import numpy as np
 import cv2
@@ -24,6 +25,7 @@ lcd.clear()
 bus = smbus.SMBus(1)
 address = 0x04
 
+#This function takes the corners found using the detect markers fucntion and using the top left and bottom right pixel corner coordinates, it finds the coordinates of the center
 def findCenter(corners): # Get the center of the aruco image in x,y pixel coordinates by taking half the difference between the top left and bottom right pixel of the marker and adding that to the top left coordinate (bottom corner (lowest) with respect to (x,y) coordinates starting from top left of image at (0,0))
     return( (abs(((corners[0][0][2][0] - corners[0][0][0][0]))/2) + corners[0][0][0][0]),
             (abs(((corners[0][0][2][1] - corners[0][0][0][1]))/2) + corners[0][0][0][1]) )
@@ -31,10 +33,14 @@ def findCenter(corners): # Get the center of the aruco image in x,y pixel coordi
 print ("Use aruco to get wheel to move. Position 0 is angle 0, position 1 is angle pi/2, position 2 is angle pi, position 3 is angle 3*pi/2. Put the aruco in quadrant 1 (+x,+y) for position 0, quadrant 2 for position 1, quadrant 3 for position 2 and quadrant 4 for position 3 respectively. Press a key to continue.")
 cv2.waitKey(0)
 
+#This initializes the video capture function and video camera using the cv2 library
 cap = cv2.VideoCapture(0)
 
+#This sets the frame rate to 10 fps which helped get the camera to run more smoothly (although the camera supposedley only runs 30 or 60)
 cap.set(cv2.CAP_PROP_FPS,10)
-        
+
+#This sets up and starts a while loop that runs 10000 times to capture a frame from the video camera and turn it to a grayscale image. Then the aruco marker detection function is run
+#And corners are found and used to calculate the center of the aruco marker relative to the screen. Based on the determined quadrant location, the location and position of the marker is printed to the screen and sent to the arduino
 i=0
 pos=50
 while(i<10000):
@@ -43,21 +49,27 @@ while(i<10000):
     #cv2.imshow('frame',frame)
     i=i+1
     
+    #Loading data about frame heigth and width, converting image to grayscale and loading the aruco library
     h, w, c = frame.shape
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
     parameters =  aruco.DetectorParameters_create()
+    #Perform marker detection on the gray image
     corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
     if corners:
         try:
+            #Finds the center of the marker in x,y pixel coordinates
             center = findCenter(corners)
             print(center)
+            #Determines the proper quadrant and angular position of the motor/wheel using if statements
             if(center[0] > w/2 and center[1] < h/2): loc, pos = "Position 0: 0", 0
             if(center[0] < w/2 and center[1] < h/2): loc, pos = "Position 1: pi/2", 1
             if(center[0] < w/2 and center[1] > h/2): loc, pos = "Position 2: pi", 2
             if(center[0] > w/2 and center[1] > h/2): loc, pos = "Position 3: 3pi/2", 3
+            #Prints the location of the marker on the image frame
             cv2.putText(frame, loc, org = (0, 400), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color = (0, 0, 0))
 
+            #Code to send the position calculated above to the arduino
             if(pos==0 or pos==1 or pos ==2 or pos ==3):
                 #send position to the Arduino
                 bus.write_byte_data(address, 0, pos)
@@ -71,31 +83,38 @@ while(i<10000):
                 #Print values on the LCD
                 lcd.message = str(pos) + ' ' +str(number)
                 
+            #Shows the image with the marker detected and the quadrant and angular position shown on the screen
             cv2.imshow('frame',frame)
+            #Waits for a key press to continue (Used for debugging)
             #cv2.waitKey(0)
             
         except: pass
-                
+    
+    #This will help with determining the angle and position of aruco markers in future demos
     #rvec, tvec,_ = aruco.estimatePoseSingleMarkers(corners, 0.05, camera_matrix, dist_co)
 
-    # Status Handling
+    # When no marker is found
     if(not corners):status = "No marker found"
 
     else:status = "Found a marker!"
     cv2.putText(frame, status, org = (0, 300), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color = (0, 0, 0))
+    #Draws the corners and id of the detected markers on the image and display the image on the Pi screen
     frame = aruco.drawDetectedMarkers(frame, corners, ids)
     cv2.imshow('frame',frame)
 
-
+    #Wait for a key press and then break if escape is pressed. The commented our print statement prints the frame size for the live videocapture and was used for debugging
     k = cv2.waitKey(1)
     if k == 27: break
     #print(h,w)
 
+#Shows the final video image captured with the status of if a marker has been found, the marker quadrant location and respective motor/wheel angle shown on the screen
 #print(frame)
 cv2.imshow('frame',frame)
 
+#Waits for a key press and then kills all active windows after finding one
 cv2.waitKey(0)
 cv2.destroyAllWindows()   
 
+#Release the video camera (turn off) and detsroy all open windows on the raspberry Pi.
 cap.release()
 cv2.destroyAllWindows()
